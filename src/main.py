@@ -44,11 +44,11 @@ def test_system(controller, x_r_func=None, state_0=None, t_f=10):
 
     transfer_functions = [sp.expand(tf) for tf in laplace_analyzer.get_transfer_functions()]
     print('\nTransfer Functions (in Primed Variables):')
-    for X, tf in zip(physics_system.X, transfer_functions):
+    for X, tf in zip(laplace_analyzer.X, transfer_functions):
         print(to_string(sp.Eq(X, tf)))
 
     print('\nControl Transfer Functions (in Primed Variables):')
-    for X, tf in zip(physics_system.X, laplace_analyzer.get_controller_transfer_functions()):
+    for X, tf in zip(laplace_analyzer.X, laplace_analyzer.get_controller_transfer_functions()):
         print(to_string(sp.Eq(X, tf)))
 
     print('K:\n', controller.K)
@@ -57,6 +57,7 @@ def test_system(controller, x_r_func=None, state_0=None, t_f=10):
     laplace_analyzer.analyze_controller(controller.K)
 
     t_vals, state_vals = simulate(physics_system, controller.C, controller.get_controller_function(x_r_func),
+                                  controller.V, controller.W,
                                   state_0, t_f)
     forces = [np.dot(controller.K, x_r_func(t_) - state_vals[2 * physics_system.x_dim:, i])[0]
               for i, t_ in enumerate(t_vals)]
@@ -69,14 +70,16 @@ def test_system(controller, x_r_func=None, state_0=None, t_f=10):
 
 
 def main():
-    # operating_point = {x_vec[2]: sp.pi}
     cart_pole = CartPole(M=1.994376, m=0.105425, L=0.110996, b=1.6359, g=9.81)
-    controller = LinearController(cart_pole, operating_point=None, C=np.identity(4),
-                                  Q=np.diag([10, 20, 100, 50]), R=np.array([[1]]), V=None, W=None)
+    controller = LinearController(cart_pole, operating_point=None, C=np.array([[1, 0, 0, 0],
+                                                                               [0, 0, 1, 0]]),
+                                  Q=np.diag([10, 20, 100, 50]), R=np.array([[1]]),
+                                  V=np.diag([0, 0.001, 0, 0.001]), W=0.0001*np.identity(2))
 
-    t_vals, state_vals = test_system(controller, x_r_func=lambda t: [0.1, 0, 0, 0],
+    t_vals, state_vals = test_system(controller, x_r_func=lambda t: [(t // 7) % 2, 0, 0, 0],
                                      state_0=np.array([0, 0, 0, 0,
-                                                       0, 0, 0, 0]))
+                                                       0, 0, 0, 0]),
+                                     t_f=30)
     for i, x in enumerate(cart_pole.x):
         plt.plot(t_vals, state_vals[2 * i, :], label=f'${to_string(x)}$')
     for i, x in enumerate(cart_pole.x):

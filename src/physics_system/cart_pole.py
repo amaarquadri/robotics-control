@@ -4,10 +4,9 @@ import numpy as np
 
 
 class CartPole(PhysicsSystem):
-    def __init__(self, M=1.0, m=0.1, L=1.0, b=1.0, g=9.81, operating_point=None,
-                 C=None, Q=None, R=None, V=None, W=None):
+    def __init__(self, M=1.0, m=0.1, L=1.0, b=1.0, g=9.81):
         constants = dict(zip(sp.symbols('M, m, L, b, g'), [M, m, L, b, g]))
-        super().__init__(constants, operating_point, C, Q, R, V, W)
+        super().__init__(constants)
 
     def create_x_and_u(self):
         x = sp.Function('x')(self.t)

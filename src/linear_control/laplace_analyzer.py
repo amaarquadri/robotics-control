@@ -26,8 +26,8 @@ class LaplaceAnalyzer:
         laplace_tf = {}
         for x, X in zip(self.phys.x, self.X):
             laplace_tf[x] = X
-            laplace_tf[sp.diff(x)] = self.phys.s * X
-            laplace_tf[sp.diff(x, (self.phys.t, 2))] = self.phys.s ** 2 * X
+            laplace_tf[sp.diff(x)] = self.s * X
+            laplace_tf[sp.diff(x, (self.phys.t, 2))] = self.s ** 2 * X
         for u, U in zip(self.phys.u, self.U):
             laplace_tf[u] = U
 
