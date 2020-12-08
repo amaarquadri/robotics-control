@@ -28,11 +28,30 @@ class LinearController:
                                             self.phys.apply_substitutions(self.C.T),
                                             self.V, self.W).T
 
+        controllability_matrix = self.controllability_matrix(self.A, self.B)
+        if np.linalg.matrix_rank(self.phys.apply_substitutions(controllability_matrix)) < 2 * self.phys.x_dim:
+            raise Exception('Not Controllable!')
+
+        observability_matrix = self.observability_matrix(self.A, self.C)
+        if np.linalg.matrix_rank(self.phys.apply_substitutions(observability_matrix)) < 2 * self.phys.x_dim:
+            raise Exception('Not Observable!')
+
+        overall_dynamics = np.block([[self.A - np.dot(self.B, self.K), np.dot(self.B, self.K)],
+                                     [np.zeros_like(self.A), self.A - np.dot(self.L, self.C)]])
+        eigenvalues, _ = np.linalg.eig(self.phys.apply_substitutions(overall_dynamics))
+        if np.any([eigenvalue.real > 0 for eigenvalue in eigenvalues]):
+            raise Exception('Overall Dynamics are unstable!')
+        print(np.max([eigenvalue.real for eigenvalue in eigenvalues]))
+
     @staticmethod
     def controllability_matrix(A, B):
-        return np.column_stack((np.linalg.multi_dot(i * [A] + [B]) for i in range(A.shape[0])))
+        return np.column_stack([(np.linalg.multi_dot(i * [A] + [B]) if i > 0 else B) for i in range(A.shape[0])])
 
-    def get_controller_function(self, x_r_func=None):
+    @staticmethod
+    def observability_matrix(A, C):
+        return np.row_stack([(np.linalg.multi_dot([C] + i * [A]) if i > 0 else C) for i in range(A.shape[0])])
+
+    def get_controller_function(self, x_r_func=None, u_max=None):
         if x_r_func is None:
             # use step input for first variable in x_r
             target = np.zeros(self.phys.x_dim)
@@ -41,12 +60,16 @@ class LinearController:
             def x_r_func(_):
                 return target
 
+        if u_max is None:
+            u_max = np.inf * np.ones(self.phys.u_dim)
+
         A_num = self.phys.apply_substitutions(self.A)
         B_num = self.phys.apply_substitutions(self.B)
 
         def controller(t, x_hat, y):
             u = np.dot(self.K, x_r_func(t) - x_hat)
-            x_hat_dot = np.dot(A_num, x_hat) + np.dot(B_num, u) + np.dot(self.L, y - np.dot(self.phys.C, x_hat))
+            u = np.sign(u) * np.minimum(np.abs(u), u_max)
+            x_hat_dot = np.dot(A_num, x_hat) + np.dot(B_num, u) + np.dot(self.L, y - np.dot(self.C, x_hat))
             return u, x_hat_dot
 
         return controller
