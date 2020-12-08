@@ -1,0 +1,6 @@
+numpy
+sympy
+tbcontrol
+scipy
+opensimplex
+matplotlib
