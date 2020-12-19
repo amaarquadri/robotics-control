@@ -10,12 +10,12 @@ class Pendulum(PhysicsSystem):
 
     def create_x_and_u(self):
         theta = sp.Function('theta')(self.t)  # positive upwards, increasing clockwise
-        torque = sp.symbols('torque')(self.t)
+        torque = sp.Function('torque')(self.t)
         return np.array([theta]), np.array([torque])
 
     def create_lagrangian(self):
         theta = self.x[0]
-        m, L, g = self.constants.keys()
+        m, L, _, g = self.constants.keys()
         I = m * L ** 2
         KE = (I / 2) * sp.diff(theta, self.t) ** 2
         PE = m * g * L * sp.cos(theta)
@@ -26,4 +26,4 @@ class Pendulum(PhysicsSystem):
         _, _, b, _ = self.constants.keys()
         theta = self.x[0]
         torque = self.u[0]
-        return torque - b * sp.diff(theta, self.t)
+        return np.array([torque - b * sp.diff(theta, self.t)])
