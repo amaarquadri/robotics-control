@@ -1,6 +1,8 @@
-numpy==1.19.3  # 1.19.4 has a bug preventing it from working on Windows
+numpy<=1.19.3  # 1.19.4 has a bug preventing it from working on Windows
 sympy
 tbcontrol
 scipy
 opensimplex
 matplotlib
+keras
+tensorflow
