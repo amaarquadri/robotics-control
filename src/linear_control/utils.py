@@ -20,6 +20,10 @@ def linear_quadratic_regulator(A, B, Q, R):
     return K
 
 
+def linear_quadratic_estimator(A, C, V, W):
+    return linear_quadratic_regulator(A.T, C.T, V, W).T
+
+
 def interweave(x, x_dot, rows=True):
     if len(x.shape) == 1:
         return np.column_stack((x, x_dot)).flatten()
@@ -62,3 +66,14 @@ def to_string(expression, to_word=True):
             .replace(r'p f \theta', r'pt') \
             .replace(r'd f \theta', r'dt')
     return text
+
+
+def process_observation_matrix(C=None, physics_system=None):
+    if C is None:
+        if physics_system is None:
+            raise ValueError('Must provide either C or physics system!')
+        # measure just first coordinate by default
+        C = np.zeros((1, 2 * physics_system.x_dim))
+        C[0, 0] = 1
+    y_dim = C.shape[0]
+    return C, y_dim

@@ -1,20 +1,16 @@
 import numpy as np
 from matplotlib import use
-from src.linear_control.utils import linear_quadratic_regulator
+from src.linear_control.utils import linear_quadratic_regulator, linear_quadratic_estimator, process_observation_matrix
+
 use('TkAgg')
 
 
 class LinearController:
     def __init__(self, physics_system, operating_point=None, C=None, Q=None, R=None, V=None, W=None):
         self.phys = physics_system
+        self.operating_point = operating_point
         self.A, self.B = physics_system.get_linearized_equations_of_motion(operating_point)
-        if C is not None:
-            self.C = C
-        else:
-            # measure just first coordinate by default
-            self.C = np.zeros((1, 2 * self.phys.x_dim))
-            self.C[0, 0] = 1
-        self.y_dim = self.C.shape[0]
+        self.C, self.y_dim = process_observation_matrix(C, physics_system)
 
         self.Q = Q if Q is not None else np.identity(2 * self.phys.x_dim)
         self.R = R if R is not None else np.identity(self.phys.u_dim)
@@ -24,9 +20,9 @@ class LinearController:
         self.K = linear_quadratic_regulator(self.phys.apply_substitutions(self.A),
                                             self.phys.apply_substitutions(self.B),
                                             self.Q, self.R)
-        self.L = linear_quadratic_regulator(self.phys.apply_substitutions(self.A.T),
-                                            self.phys.apply_substitutions(self.C.T),
-                                            self.V, self.W).T
+        self.L = linear_quadratic_estimator(self.phys.apply_substitutions(self.A),
+                                            self.phys.apply_substitutions(self.C),
+                                            self.V, self.W)
 
         controllability_matrix = self.controllability_matrix(self.A, self.B)
         if np.linalg.matrix_rank(self.phys.apply_substitutions(controllability_matrix)) < 2 * self.phys.x_dim:
@@ -36,12 +32,23 @@ class LinearController:
         if np.linalg.matrix_rank(self.phys.apply_substitutions(observability_matrix)) < 2 * self.phys.x_dim:
             raise Exception('Not Observable!')
 
-        overall_dynamics = np.block([[self.A - np.dot(self.B, self.K), np.dot(self.B, self.K)],
-                                     [np.zeros_like(self.A), self.A - np.dot(self.L, self.C)]])
-        eigenvalues, _ = np.linalg.eig(self.phys.apply_substitutions(overall_dynamics))
+        self.overall_dynamics = np.block([[self.A - np.dot(self.B, self.K), np.dot(self.B, self.K)],
+                                          [np.zeros_like(self.A), self.A - np.dot(self.L, self.C)]])
+        print(self.phys.apply_substitutions(self.overall_dynamics))
+        eigenvalues, _ = np.linalg.eig(self.phys.apply_substitutions(self.overall_dynamics))
         if np.any([eigenvalue.real > 0 for eigenvalue in eigenvalues]):
             raise Exception('Overall Dynamics are unstable!')
         print(np.max([eigenvalue.real for eigenvalue in eigenvalues]))
+        print()
+
+    def test_convergence(self):
+        from scipy.integrate import solve_ivp
+        M = self.phys.apply_substitutions(self.overall_dynamics)
+        result = solve_ivp(lambda x: np.dot(M, x), (0, 20), np.array([0, 0, 0, 0,
+                                                                      0.1, 0, 0, 0]),
+                           method='RK45', rtol=1e-3)
+        # noinspection PyUnresolvedReferences
+        return result.t, result.y
 
     @staticmethod
     def controllability_matrix(A, B):
