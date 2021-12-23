@@ -3,7 +3,7 @@ import sympy as sp
 from src.physics_system.cart_pole import CartPole
 from src.linear_control.linear_controller import LinearController
 from src.linear_control.laplace_analyzer import LaplaceAnalyzer
-from src.simulation.simulator import simulate
+from src.simulation.simulator import simulate_closed_loop
 from src.linear_control.utils import to_string
 import matplotlib.pyplot as plt
 from matplotlib import use
@@ -56,9 +56,9 @@ def test_system(controller, x_r_func=None, state_0=None, t_f=10):
 
     laplace_analyzer.analyze_controller(controller.K)
 
-    t_vals, state_vals = simulate(physics_system, controller.C, controller.get_controller_function(x_r_func),
-                                  controller.V, controller.W,
-                                  state_0, t_f)
+    t_vals, state_vals = simulate_closed_loop(physics_system, controller.C, controller.get_controller_function(x_r_func),
+                                              controller.V, controller.W,
+                                              state_0, t_f)
     forces = [np.dot(controller.K, x_r_func(t_) - state_vals[2 * physics_system.x_dim:, i])[0]
               for i, t_ in enumerate(t_vals)]
     powers = [force * velocity for force, velocity in zip(forces, state_vals[1, :])]
