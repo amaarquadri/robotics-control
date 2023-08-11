@@ -21,7 +21,7 @@ def simulate(physics_system, C, controller, V=None, W=None, state_0=None, t_f=10
     control_noise = gaussian_noise_function(variances=W)
 
     def state_derivative(t, state):
-        print(t)
+        # print(t)
         midpoint = len(state) // 2
         x = state[:midpoint]
         x_hat = state[midpoint:]

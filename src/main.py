@@ -1,13 +1,14 @@
 import numpy as np
 import sympy as sp
 from src.physics_system.cart_pole import CartPole
+from src.physics_system.rocket import Rocket
 from src.linear_control.linear_controller import LinearController
 from src.linear_control.laplace_analyzer import LaplaceAnalyzer
 from src.simulation.simulator import simulate
 from src.linear_control.utils import to_string
 import matplotlib.pyplot as plt
-from matplotlib import use
-use('TkAgg')
+# from matplotlib import use
+# use('TkAgg')
 
 
 def test_system(controller, x_r_func=None, state_0=None, t_f=10):
@@ -69,23 +70,26 @@ def test_system(controller, x_r_func=None, state_0=None, t_f=10):
     return t_vals, state_vals
 
 
-def main():
+def cart_pole_main():
     cart_pole = CartPole(M=1.994376, m=0.105425, L=0.110996, b=1.6359, g=9.81)
     controller = LinearController(cart_pole, operating_point=None, C=np.array([[1, 0, 0, 0],
                                                                                [0, 0, 1, 0]]),
                                   Q=np.diag([10, 20, 100, 50]), R=np.array([[1]]),
                                   V=np.diag([0, 0.001, 0, 0.001]), W=0.0001*np.identity(2))
 
-    t_vals, state_vals = test_system(controller, x_r_func=lambda t: [(t // 7) % 2, 0, 0, 0],
+    x_r_func = lambda t: [(t // 7) % 2, 0, 0, 0]
+    t_vals, state_vals = test_system(controller, x_r_func,
                                      state_0=np.array([0, 0, 0, 0,
                                                        0, 0, 0, 0]),
                                      t_f=30)
+
+    plt.figure()
     for i, x in enumerate(cart_pole.x):
         plt.plot(t_vals, state_vals[2 * i, :], label=f'${to_string(x)}$')
     for i, x in enumerate(cart_pole.x):
         plt.plot(t_vals, state_vals[2 * (cart_pole.x_dim + i), :], label=f'$\\hat{{{to_string(x)}}}$')
 
-    # plt.plot(t_vals, x_r_func(t_vals)[0], label=r'$x_{r}$')
+    plt.plot(t_vals, x_r_func(t_vals)[0], label=r'$x_{r}$')
     plt.xlabel('Time (s)')
     plt.ylabel(r'Position (m), Velocity (m/s), $\theta$ (rad), $\omega$ (rad/s)')
     plt.title(r'Recovery from x Perturbation of 15 Meters')
@@ -94,5 +98,33 @@ def main():
     plt.show()
 
 
+def rocket_main():
+    rocket = Rocket(m=1, L=1, g=9.81)
+    controller = LinearController(rocket, operating_point=None, C=np.array([[1, 0, 0, 0, 0, 0],
+                                                                            [0, 0, 1, 0, 0, 0],
+                                                                            [0, 0, 0, 0, 1, 0]]),
+                                  Q=np.diag([1, 1, 1, 1, 1, 1]), R=np.diag([1, 1]),
+                                  V=np.diag([0, 0, 0, 0, 0, 0]), W=np.diag([0, 0, 0]))
+
+    x_r_func = lambda t: [(t // 7) % 2, 0, 0, 0, 0, 0]
+    t_vals, state_vals = test_system(controller, x_r_func,
+                                     state_0=None,
+                                     t_f=30)
+
+    plt.figure()
+    for i, x in enumerate(rocket.x):
+        plt.plot(t_vals, state_vals[2 * i, :], label=f'${to_string(x)}$')
+    for i, x in enumerate(rocket.x):
+        plt.plot(t_vals, state_vals[2 * (rocket.x_dim + i), :], label=f'$\\hat{{{to_string(x)}}}$')
+
+    plt.plot(t_vals, x_r_func(t_vals)[0], label=r'$x_{r}$')
+    plt.xlabel('Time (s)')
+    plt.ylabel(r'Position (m), Velocity (m/s), $\theta$ (rad), $\omega$ (rad/s)')
+    plt.title('Recovery from x Perturbation of 15 Meters')
+    plt.legend()
+    # plt.savefig('theta_perturbation.png')
+    plt.show()
+
+
 if __name__ == '__main__':
-    main()
+    rocket_main()

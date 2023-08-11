@@ -1,8 +1,8 @@
 import numpy as np
-from matplotlib import use
+# from matplotlib import use
 from src.linear_control.utils import linear_quadratic_regulator, linear_quadratic_estimator, process_observation_matrix
 
-use('TkAgg')
+# use('TkAgg')
 
 
 class LinearController:
